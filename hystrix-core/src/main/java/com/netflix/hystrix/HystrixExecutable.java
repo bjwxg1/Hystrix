@@ -41,6 +41,7 @@ public interface HystrixExecutable<R> extends HystrixInvokable<R> {
      * @throws HystrixBadRequestException
      *             if the {@link HystrixCommand} instance considers request arguments to be invalid and needs to throw an error that does not represent a system failure
      */
+    //同步执行HystrixCommand的命令
     public R execute();
 
     /**
@@ -58,6 +59,7 @@ public interface HystrixExecutable<R> extends HystrixInvokable<R> {
      * @throws HystrixBadRequestException
      *             if the {@link HystrixCommand} instance considers request arguments to be invalid and needs to throw an error that does not represent a system failure
      */
+    //异步执行HystrixCommand的命令，queue命令会将command添加到线程池中然后返回Future
     public Future<R> queue();
 
     /**
@@ -88,6 +90,7 @@ public interface HystrixExecutable<R> extends HystrixInvokable<R> {
      * @throws IllegalStateException
      *             if invoked more than once
      */
+    //异步执行，并且带有一个callback
     public Observable<R> observe();
 
 }

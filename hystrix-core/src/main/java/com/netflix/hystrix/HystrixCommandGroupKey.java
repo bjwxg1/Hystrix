@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * This interface is intended to work natively with Enums so that implementing code can have an enum with the owners that implements this interface.
  */
+//将HystrixCommand进行分组管理，比如报告、警报、仪表盘或组/库。
+//默认情况下，Hystrix使用 HystrixCommandGroupKey 来定义命令线程池，除非单独定义线程池。
 public interface HystrixCommandGroupKey {
 
     /**
@@ -31,6 +33,7 @@ public interface HystrixCommandGroupKey {
      * 
      * @return String
      */
+    //分组名称
     public String name();
 
     public static class Factory {
@@ -38,7 +41,8 @@ public interface HystrixCommandGroupKey {
         private Factory() {
         }
 
-        // used to intern instances so we don't keep re-creating them millions of times for the same key
+        //used to intern instances so we don't keep re-creating them millions of times for the same key
+        //保存所有的HystrixCommandGroupKey 的Map
         private static ConcurrentHashMap<String, HystrixCommandGroupKey> intern = new ConcurrentHashMap<>();
 
         /**

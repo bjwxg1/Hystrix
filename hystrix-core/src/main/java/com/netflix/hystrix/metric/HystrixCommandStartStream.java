@@ -29,11 +29,13 @@ import java.util.concurrent.ConcurrentMap;
  * Events are emitted synchronously in the same thread that performs the command execution.
  */
 public class HystrixCommandStartStream implements HystrixEventStream<HystrixCommandExecutionStarted> {
+    //Command key
     private final HystrixCommandKey commandKey;
-
+    //subject是连接两个Observable的桥梁
     private final Subject<HystrixCommandExecutionStarted, HystrixCommandExecutionStarted> writeOnlySubject;
     private final Observable<HystrixCommandExecutionStarted> readOnlyStream;
 
+    //维护和所以command对应的HystrixCommandStartStream
     private static final ConcurrentMap<String, HystrixCommandStartStream> streams = new ConcurrentHashMap<>();
 
     public static HystrixCommandStartStream getInstance(HystrixCommandKey commandKey) {

@@ -35,7 +35,6 @@ import com.netflix.hystrix.strategy.properties.HystrixPropertiesStrategy;
  * 
  * @param <R>
  *            the return type
- * 
  * @ThreadSafe
  */
 public abstract class HystrixCommand<R> extends AbstractCommand<R> implements HystrixExecutable<R>, HystrixInvokableInfo<R>, HystrixObservable<R> {
@@ -134,7 +133,8 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
      * <p>
      * Most of the args will revert to a valid default if 'null' is passed in.
      */
-    /* package for testing */HystrixCommand(HystrixCommandGroupKey group, HystrixCommandKey key, HystrixThreadPoolKey threadPoolKey, HystrixCircuitBreaker circuitBreaker, HystrixThreadPool threadPool,
+    /* package for testing */
+    HystrixCommand(HystrixCommandGroupKey group, HystrixCommandKey key, HystrixThreadPoolKey threadPoolKey, HystrixCircuitBreaker circuitBreaker, HystrixThreadPool threadPool,
             HystrixCommandProperties.Setter commandPropertiesDefaults, HystrixThreadPoolProperties.Setter threadPoolPropertiesDefaults,
             HystrixCommandMetrics metrics, TryableSemaphore fallbackSemaphore, TryableSemaphore executionSemaphore,
             HystrixPropertiesStrategy propertiesStrategy, HystrixCommandExecutionHook executionHook) {
@@ -359,6 +359,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
      * @throws IllegalStateException
      *             if invoked more than once
      */
+    //用于异步执行命名：将命令加入到Thread Pool，然后返回Future，然后通过Future去获取执行结果
     public Future<R> queue() {
         /*
          * --- Schedulers.immediate()

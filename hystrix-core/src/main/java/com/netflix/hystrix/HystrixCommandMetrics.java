@@ -46,6 +46,7 @@ public class HystrixCommandMetrics extends HystrixMetrics {
 
     private static final HystrixEventType[] ALL_EVENT_TYPES = HystrixEventType.values();
 
+    //统计每个bucket各种事件触发的次数
     public static final Func2<long[], HystrixCommandCompletion, long[]> appendEventToBucket = (initialCountArray, execution) -> {
         ExecutionResult.EventCounts eventCounts = execution.getEventCounts();
         for (HystrixEventType eventType: ALL_EVENT_TYPES) {
@@ -59,6 +60,7 @@ public class HystrixCommandMetrics extends HystrixMetrics {
         return initialCountArray;
     };
 
+    //聚合时间窗口内部各个bucket的事件数据
     public static final Func2<long[], long[], long[]> bucketAggregator = (cumulativeEvents, bucketEventCounts) -> {
         for (HystrixEventType eventType: ALL_EVENT_TYPES) {
             switch (eventType) {
@@ -76,6 +78,7 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     };
 
     // String is HystrixCommandKey.name() (we can't use HystrixCommandKey directly as we can't guarantee it implements hashcode/equals correctly)
+    //command key和HystrixCommandMetrics的映射
     private static final ConcurrentHashMap<String, HystrixCommandMetrics> metrics = new ConcurrentHashMap<>();
 
     /**
@@ -156,7 +159,8 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     /**
      * Clears all state from metrics. If new requests come in instances will be recreated and metrics started from scratch.
      */
-    /* package */ static void reset() {
+    /* package */
+    static void reset() {
         getInstances().forEach(com.netflix.hystrix.HystrixCommandMetrics::unsubscribeAll);
         metrics.clear();
     }
@@ -165,8 +169,11 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     private final HystrixCommandKey key;
     private final HystrixCommandGroupKey group;
     private final HystrixThreadPoolKey threadPoolKey;
+    //并发线程数计数器
     private final AtomicInteger concurrentExecutionCount = new AtomicInteger();
 
+    /*-------------------------command 执行过程中的各种统计信息 ----------------------------------*/
+    //Command在时间窗口内的健康状况信息
     private HealthCountsStream healthCountsStream;
     private final RollingCommandEventCounterStream rollingCommandEventCounterStream;
     private final CumulativeCommandEventCounterStream cumulativeCommandEventCounterStream;
@@ -174,7 +181,8 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     private final RollingCommandUserLatencyDistributionStream rollingCommandUserLatencyDistributionStream;
     private final RollingCommandMaxConcurrencyStream rollingCommandMaxConcurrencyStream;
 
-    /* package */HystrixCommandMetrics(final HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties, HystrixEventNotifier eventNotifier) {
+    /* package */
+    HystrixCommandMetrics(final HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties, HystrixEventNotifier eventNotifier) {
         super(null);
         this.key = key;
         this.group = commandGroup;
@@ -197,7 +205,8 @@ public class HystrixCommandMetrics extends HystrixMetrics {
         rollingCommandMaxConcurrencyStream = RollingCommandMaxConcurrencyStream.getInstance(key, properties);
     }
 
-    /* package */ synchronized void resetStream() {
+    /* package */
+    synchronized void resetStream() {
         healthCountsStream.unsubscribe();
         HealthCountsStream.removeByKey(key);
         healthCountsStream = HealthCountsStream.getInstance(key, properties);
@@ -330,12 +339,16 @@ public class HystrixCommandMetrics extends HystrixMetrics {
         return concurrentExecutionCount.get();
     }
 
-    /* package-private */ void markCommandStart(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy) {
+    /* package-private */
+    //发送CommandStart消息
+    void markCommandStart(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy) {
         int currentCount = concurrentExecutionCount.incrementAndGet();
         HystrixThreadEventStream.getInstance().commandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentCount);
     }
 
-    /* package-private */ void markCommandDone(ExecutionResult executionResult, HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey) {
+    /* package-private */
+    //Metrics 发送Command执行完毕事件
+    void markCommandDone(ExecutionResult executionResult, HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey) {
         HystrixThreadEventStream.getInstance().executionDone(executionResult, commandKey, threadPoolKey);
         if (executionResult.executionOccurred()) {
             concurrentExecutionCount.decrementAndGet();
@@ -382,8 +395,11 @@ public class HystrixCommandMetrics extends HystrixMetrics {
      * Number that failed (failure + success + timeout + threadPoolRejected + semaphoreRejected).
      * Error percentage;
      */
+    //Command在时间窗口内的健康统计信息
     public static class HealthCounts {
+        //总请求数
         private final long totalCount;
+        //错误数
         private final long errorCount;
         private final int errorPercentage;
 

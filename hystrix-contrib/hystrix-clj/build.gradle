@@ -1,10 +1,6 @@
 buildscript {
     repositories {
-        jcenter()
-        maven{
-          name 'clojars'
-          url 'http://clojars.org/repo'
-        }
+       maven{ url 'http://maven.aliyun.com/nexus/content/groups/public'}
     }
     dependencies {
         classpath 'com.netflix.nebula:nebula-clojure-plugin:1.12.2'

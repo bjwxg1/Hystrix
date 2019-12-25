@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * This interface is intended to work natively with Enums so that implementing code can be an enum that implements this interface.
  */
+//HystrixCommand的标识，用于监控、熔断、监控推送等
 public interface HystrixCommandKey {
 
     /**

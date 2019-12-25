@@ -21,8 +21,10 @@ import com.netflix.hystrix.util.HystrixRollingNumberEvent;
 /**
  * Abstract base class for Hystrix metrics
  */
+//Hystrix指标
 public abstract class HystrixMetrics {
 
+    //基于滑动窗口的计数器
     protected final HystrixRollingNumber counter;
 
     protected HystrixMetrics(HystrixRollingNumber counter) {

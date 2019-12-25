@@ -1,6 +1,6 @@
 buildscript {
     repositories {
-        jcenter()
+     maven{ url 'http://maven.aliyun.com/nexus/content/groups/public'}
     }
     dependencies {
         classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
@@ -19,7 +19,7 @@ ext {
 
 allprojects {
     repositories {
-        jcenter()
+        maven{ url 'http://maven.aliyun.com/nexus/content/groups/public'}
     }
 
     apply plugin: 'net.saliman.cobertura'

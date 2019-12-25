@@ -45,6 +45,7 @@ public class HystrixRequestCache {
      * <p>
      * Key => CommandPrefix + CacheKey : Future<?> from queue()
      */
+    //保存缓存的Map
     private static final HystrixRequestVariableHolder<ConcurrentHashMap<ValueCacheKey, Observable<?>>> requestVariableForCache = new HystrixRequestVariableHolder<>(new HystrixRequestVariableLifecycle<ConcurrentHashMap<ValueCacheKey, Observable<?>>>() {
 
         @Override
@@ -95,7 +96,8 @@ public class HystrixRequestCache {
      */
     // suppressing warnings because we are using a raw Future since it's in a heterogeneous ConcurrentHashMap cache
     @SuppressWarnings({ "unchecked" })
-    /* package */<T> Observable<T> get(String cacheKey) {
+    /* package */
+    <T> Observable<T> get(String cacheKey) {
         ValueCacheKey key = getRequestCacheKey(cacheKey);
         if (key != null) {
             ConcurrentHashMap<ValueCacheKey, Observable<?>> cacheInstance = requestVariableForCache.get(concurrencyStrategy);
@@ -212,9 +214,13 @@ public class HystrixRequestCache {
 
     }
 
+    //请求的Cache key
     private static class RequestCacheKey {
+        //Command的类型 Collapser为2，Command为1
         private final short type; // used to differentiate between Collapser/Command if key is same between them
+        //Command getCacheKey()方法返回的key
         private final String key;
+        //并发策略
         private final HystrixConcurrencyStrategy concurrencyStrategy;
 
         private RequestCacheKey(HystrixCommandKey commandKey, HystrixConcurrencyStrategy concurrencyStrategy) {

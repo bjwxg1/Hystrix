@@ -1,12 +1,12 @@
 /**
  * Copyright 2014 Netflix, Inc.
- * 
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ import com.netflix.hystrix.exception.HystrixRuntimeException;
 
 /**
  * Common interface for executables that implement the Observable methods {@link #observe()} and {@link #toObservable()} so client code can treat them the same and combine in typed collections if desired.
- * 
+ *
  * @param <R>
  */
 public interface HystrixObservable<R> extends HystrixInvokable<R> {
@@ -58,6 +58,7 @@ public interface HystrixObservable<R> extends HystrixInvokable<R> {
      * @throws IllegalStateException
      *             if invoked more than once
      */
+    //饿汉式：在调用的时候就执行command
     public Observable<R> observe();
 
     /**
@@ -89,6 +90,7 @@ public interface HystrixObservable<R> extends HystrixInvokable<R> {
      * @throws IllegalStateException
      *             if invoked more than once
      */
+    //懒汉式：只有在订阅之后才执行command
     public Observable<R> toObservable();
-    
+
 }

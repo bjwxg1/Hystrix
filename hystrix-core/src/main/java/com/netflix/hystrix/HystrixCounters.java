@@ -21,10 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Class with global statistics on Hystrix runtime behavior.
  * All of the data available via this class is static and scoped at the JVM level
  */
+//JVM全局统计信息
 public class HystrixCounters {
+    //全局的并发线程数
     private static final AtomicInteger concurrentThreadsExecuting = new AtomicInteger(0);
 
-    /* package-private */ static void incrementGlobalConcurrentThreads() {
+    /* package-private */
+    static void incrementGlobalConcurrentThreads() {
         concurrentThreadsExecuting.incrementAndGet();
     }
 
@@ -44,6 +47,7 @@ public class HystrixCounters {
      * Return the number of unique {@link HystrixCommand}s that have been registered
      * @return number of unique {@link HystrixCommand}s that have been registered
      */
+    //所有已经注册【唯一的】的commandKey数量
     public static int getCommandCount() {
         return HystrixCommandKey.Factory.getCommandCount();
     }
@@ -52,6 +56,7 @@ public class HystrixCounters {
      * Return the number of unique {@link HystrixThreadPool}s that have been registered
      * @return number of unique {@link HystrixThreadPool}s that have been registered
      */
+    //所有已经注册【唯一的】的ThreadPoolCount数量
     public static int getThreadPoolCount() {
         return HystrixThreadPoolKey.Factory.getThreadPoolCount();
     }
@@ -60,6 +65,7 @@ public class HystrixCounters {
      * Return the number of unique {@link HystrixCommandGroupKey}s that have been registered
      * @return number of unique {@link HystrixCommandGroupKey}s that have been registered
      */
+    //所有已经注册【唯一的】的CommandGroup数量
     public static int getGroupCount() {
         return HystrixCommandGroupKey.Factory.getGroupCount();
     }

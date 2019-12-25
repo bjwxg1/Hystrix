@@ -56,51 +56,69 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-/* package */abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObservable<R> {
+abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObservable<R> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractCommand.class);
+    //熔断器
     protected final HystrixCircuitBreaker circuitBreaker;
+    //线程池隔离时使用的线程池
     protected final HystrixThreadPool threadPool;
+    //线程池对应的Key
     protected final HystrixThreadPoolKey threadPoolKey;
+    //HystrixCommand 配置
     protected final HystrixCommandProperties properties;
 
+    //超时状态
     protected static enum TimedOutStatus {
         NOT_EXECUTED, COMPLETED, TIMED_OUT
     }
 
+    //HystrixCommand的统计指标
     protected final HystrixCommandMetrics metrics;
 
+    //HystrixCommandKey
     protected final HystrixCommandKey commandKey;
+    //HystrixCommandGroupKey
     protected final HystrixCommandGroupKey commandGroup;
 
     /**
-     * Plugin implementations
+     * Plugin implementations TODO
      */
     protected final HystrixEventNotifier eventNotifier;
+    //HystrixConcurrencyStrategy[一些创建线程池是使用的策略]
     protected final HystrixConcurrencyStrategy concurrencyStrategy;
+    //
+    // HystrixCommandExecutionHook TODO
     protected final HystrixCommandExecutionHook executionHook;
 
     /* FALLBACK Semaphore */
+    //降级处理的并发控制
     protected final TryableSemaphore fallbackSemaphoreOverride;
     /* each circuit has a semaphore to restrict concurrent fallback execution */
     protected static final ConcurrentHashMap<String, TryableSemaphore> fallbackSemaphorePerCircuit = new ConcurrentHashMap<>();
     /* END FALLBACK Semaphore */
 
     /* EXECUTION Semaphore */
+    //信号量隔离时使用的信号量
     protected final TryableSemaphore executionSemaphoreOverride;
     /* each circuit has a semaphore to restrict concurrent fallback execution */
     protected static final ConcurrentHashMap<String, TryableSemaphore> executionSemaphorePerCircuit = new ConcurrentHashMap<>();
     /* END EXECUTION Semaphore */
 
+    //TimerListener 主要用于判断Command是否超时。TimerListener在HystrixTimer中执行
     protected final AtomicReference<Reference<TimerListener>> timeoutTimer = new AtomicReference<>();
-
+    //启动标识
     protected AtomicBoolean started = new AtomicBoolean();
 
     /* result of execution (if this command instance actually gets executed, which may not occur due to request caching) */
+    //执行结果
     protected volatile ExecutionResult executionResult = ExecutionResult.EMPTY;
 
     /* If this command executed and timed-out */
+    //超时状态
     protected final AtomicReference<TimedOutStatus> isCommandTimedOut = new AtomicReference<>(TimedOutStatus.NOT_EXECUTED);
+    //任务完成标识
     protected final AtomicBoolean isExecutionComplete = new AtomicBoolean(false);
+    //Command执行完时的执行方法
     protected final AtomicReference<Action0> endCurrentThreadExecutingCommand = new AtomicReference<>(); // don't like how this is being done
 
     /**
@@ -115,7 +133,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
     private static ConcurrentHashMap<HystrixCommandKey, Boolean> commandContainsFallback = new ConcurrentHashMap<>();
 
-    /* package */static String getDefaultNameFromClass(Class<?> cls) {
+    static String getDefaultNameFromClass(Class<?> cls) {
         String fromCache = defaultNameCache.get(cls);
         if (fromCache != null) {
             return fromCache;
@@ -138,13 +156,17 @@ import java.util.concurrent.atomic.AtomicReference;
             HystrixCommandProperties.Setter commandPropertiesDefaults, HystrixThreadPoolProperties.Setter threadPoolPropertiesDefaults,
             HystrixCommandMetrics metrics, TryableSemaphore fallbackSemaphore, TryableSemaphore executionSemaphore,
             HystrixPropertiesStrategy propertiesStrategy, HystrixCommandExecutionHook executionHook) {
-
+        //HystrixCommandGroupKey不能为空
         this.commandGroup = initGroupKey(group);
+        //如果HystrixCommandKey为空，默认使用className
         this.commandKey = initCommandKey(key, getClass());
         this.properties = initCommandProperties(this.commandKey, propertiesStrategy, commandPropertiesDefaults);
         this.threadPoolKey = initThreadPoolKey(threadPoolKey, this.commandGroup, this.properties.executionIsolationThreadPoolKeyOverride().get());
+        //初始化metrics
         this.metrics = initMetrics(metrics, this.commandGroup, this.threadPoolKey, this.commandKey, this.properties);
+        //初始化circuitBreaker
         this.circuitBreaker = initCircuitBreaker(this.properties.circuitBreakerEnabled().get(), circuitBreaker, this.commandGroup, this.commandKey, this.properties, this.metrics);
+        //初始化threadPool
         this.threadPool = initThreadPool(threadPool, this.threadPoolKey, threadPoolPropertiesDefaults);
 
 
@@ -335,6 +357,7 @@ import java.util.concurrent.atomic.AtomicReference;
      */
     public Observable<R> toObservable() {
         /* this is a stateful object so can only be used once */
+        //判断是否已经启动，如果没有直接返回
         if (!started.compareAndSet(false, true)) {
             throw new IllegalStateException("This instance can only be executed once. Please instantiate a new instance.");
         }
@@ -343,7 +366,9 @@ import java.util.concurrent.atomic.AtomicReference;
         final boolean requestCacheEnabled = isRequestCachingEnabled();
 
         /* try from cache first */
+        //如果允许cache，尝试从cache中获取
         if (requestCacheEnabled) {
+            //从RequestCache中获取响应（Observable）
             Observable<R> fromCache = requestCache.get(getCacheKey());
             if (fromCache != null) {
                 long latency = System.currentTimeMillis() - executionResult.getStartTimestamp();
@@ -362,8 +387,8 @@ import java.util.concurrent.atomic.AtomicReference;
         }
 
         // create an Observable that will lazily execute when subscribed to
+        //创建Observable
         Observable<R> o = Observable.create(new OnSubscribe<R>() {
-
             @Override
             public void call(Subscriber<? super R> observer) {
                 // async record keeping
@@ -374,12 +399,15 @@ import java.util.concurrent.atomic.AtomicReference;
                 executionHook.onStart(_this);
 
                 /* determine if we're allowed to execute */
+                //判断断路器是否允许命令通过
                 if (circuitBreaker.allowRequest()) {
                     final TryableSemaphore executionSemaphore = getExecutionSemaphore();
                     // acquire a permit
+                    //获取信号量
                     if (executionSemaphore.tryAcquire()) {
                         try {
                             /* used to track userThreadExecutionTime */
+                            //设置执行开始时间
                             executionResult = executionResult.setInvocationStartTime(System.currentTimeMillis());
                             getRunObservableDecoratedForMetricsAndErrorHandling()
                                     .doOnTerminate(executionSemaphore::release).unsafeSubscribe(observer);
@@ -387,16 +415,20 @@ import java.util.concurrent.atomic.AtomicReference;
                             observer.onError(e);
                         }
                     } else {
+                        //如果获取信号量失败
                         Exception semaphoreRejectionException = new RuntimeException("could not acquire a semaphore for execution");
                         executionResult = executionResult.setExecutionException(semaphoreRejectionException);
                         eventNotifier.markEvent(HystrixEventType.SEMAPHORE_REJECTED, commandKey);
                         logger.debug("HystrixCommand Execution Rejection by Semaphore."); // debug only since we're throwing the exception and someone higher will do something with it
                         // retrieve a fallback or throw an exception if no fallback available
+                        //获取fallBack或者抛出异常
                         getFallbackOrThrowException(HystrixEventType.SEMAPHORE_REJECTED, FailureType.REJECTED_SEMAPHORE_EXECUTION,
                                 "could not acquire a semaphore for execution", semaphoreRejectionException)
                                 .unsafeSubscribe(observer);
                     }
-                } else {
+                }
+                //断路处理逻辑
+                else {
                     // record that we are returning a short-circuited fallback
                     eventNotifier.markEvent(HystrixEventType.SHORT_CIRCUITED, commandKey);
                     // short-circuit and go directly to fallback (or throw an exception if no fallback implemented)
@@ -430,6 +462,7 @@ import java.util.concurrent.atomic.AtomicReference;
                 tl.clear();
             }
 
+            //用户线程延迟
             long userThreadLatency = System.currentTimeMillis() - executionResult.getStartTimestamp();
             executionResult = executionResult.markUserThreadCompletion((int) userThreadLatency);
             metrics.markCommandDone(executionResult, commandKey, threadPoolKey);
@@ -465,21 +498,23 @@ import java.util.concurrent.atomic.AtomicReference;
         final HystrixRequestContext currentRequestContext = HystrixRequestContext.getContextForCurrentThread();
 
         Observable<R> run;
+        //判断是否是线程池隔离
         if (properties.executionIsolationStrategy().get().equals(ExecutionIsolationStrategy.THREAD)) {
-            // mark that we are executing in a thread (even if we end up being rejected we still were a THREAD execution and not SEMAPHORE)
-
+            // mark that we are executing in a thread (even if we end up being rejected we still were a THREAD execution and not SEMAPHORE
+            //创建Observable
             run = Observable.create(new OnSubscribe<R>() {
-
                 @Override
                 public void call(Subscriber<? super R> s) {
+                    //metrics创建并发送CommandStart事件
                     metrics.markCommandStart(commandKey, threadPoolKey, ExecutionIsolationStrategy.THREAD);
-
+                    //判断命令执行是否超时，如果已经超时，发送ERROR事件
                     if (isCommandTimedOut.get() == TimedOutStatus.TIMED_OUT) {
                         // the command timed out in the wrapping thread so we will return immediately
                         // and not increment any of the counters below or other such logic
                         s.onError(new RuntimeException("timed out before executing run()"));
                     } else {
                         // not timed out so execute
+                        //增加并发线程数
                         HystrixCounters.incrementGlobalConcurrentThreads();
                         threadPool.markThreadExecution();
                         // store the command that is being run
@@ -491,6 +526,7 @@ import java.util.concurrent.atomic.AtomicReference;
                         try {
                             executionHook.onThreadStart(_self);
                             executionHook.onExecutionStart(_self);
+                            //
                             getExecutionObservableWithLifecycle().unsafeSubscribe(s);
                         } catch (Throwable ex) {
                             s.onError(ex);
@@ -602,6 +638,7 @@ import java.util.concurrent.atomic.AtomicReference;
         Observable<R> userObservable;
 
         try {
+            //获取执行run()方法的Observable
             userObservable = getExecutionObservable();
         } catch (Throwable ex) {
             // the run() method is a user provided implementation so can throw instead of using Observable.onError
@@ -633,6 +670,7 @@ import java.util.concurrent.atomic.AtomicReference;
      * @throws HystrixRuntimeException
      *             if getFallback() fails (throws an Exception) or is rejected by the semaphore
      */
+    //在信号量的保护下执行fallBack逻辑
     private Observable<R> getFallbackOrThrowException(final HystrixEventType eventType, final FailureType failureType, final String message, final Exception originalException) {
         final HystrixRequestContext currentRequestContext = HystrixRequestContext.getContextForCurrentThread();
         long latency = System.currentTimeMillis() - executionResult.getStartTimestamp();
@@ -642,6 +680,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
         Observable<R> fallbackLogicApplied;
 
+        //判断是否值可恢复异常
         if (isUnrecoverable(originalException)) {
             Exception e = originalException;
             logger.error("Unrecoverable Error for HystrixCommand so will throw HystrixRuntimeException and not apply fallback. ", e);
@@ -668,14 +707,13 @@ import java.util.concurrent.atomic.AtomicReference;
                 final AbstractCommand<R> _cmd = this;
 
                 final TryableSemaphore fallbackSemaphore = getFallbackSemaphore();
-
                 Observable<R> fallbackExecutionChain;
-
-                // acquire a permit
+                // acquire a permit尝试获取permit
                 if (fallbackSemaphore.tryAcquire()) {
                     try {
                         if (isFallbackUserSupplied(this)) {
                             executionHook.onFallbackStart(this);
+                            //获取FallbackObservable
                             fallbackExecutionChain = getFallbackObservable();
                         } else {
                             //same logic as above without the hook invocation
@@ -870,10 +908,10 @@ import java.util.concurrent.atomic.AtomicReference;
              * Define the action to perform on timeout outside of the TimerListener to it can capture the HystrixRequestContext
              * of the calling thread which doesn't exist on the Timer thread.
              */
+
             final HystrixContextRunnable timeoutRunnable = new HystrixContextRunnable(originalCommand.concurrencyStrategy, () -> child.onError(new HystrixTimeoutException()));
-
+            //创建并设置TimerListener
             TimerListener listener = new TimerListener() {
-
                 @Override
                 public void tick() {
                     // if we can go from NOT_EXECUTED to TIMED_OUT then we do the timeout codepath
@@ -881,10 +919,8 @@ import java.util.concurrent.atomic.AtomicReference;
                     if (originalCommand.isCommandTimedOut.compareAndSet(TimedOutStatus.NOT_EXECUTED, TimedOutStatus.TIMED_OUT)) {
                         // report timeout failure
                         originalCommand.eventNotifier.markEvent(HystrixEventType.TIMEOUT, originalCommand.commandKey);
-
                         // shut down the original request
                         s.unsubscribe();
-
                         timeoutRunnable.run();
                         //if it did not start, then we need to mark a command start for concurrency metrics, and then issue the timeout
                     }
@@ -897,7 +933,6 @@ import java.util.concurrent.atomic.AtomicReference;
             };
 
             final Reference<TimerListener> tl = HystrixTimer.getInstance().addTimerListener(listener);
-
             // set externally so execute/queue can see this
             originalCommand.timeoutTimer.set(tl);
 
@@ -905,7 +940,6 @@ import java.util.concurrent.atomic.AtomicReference;
              * If this subscriber receives values it means the parent succeeded/completed
              */
             Subscriber<R> parent = new Subscriber<R>() {
-
                 @Override
                 public void onCompleted() {
                     if (isNotTimedOut()) {
@@ -1013,7 +1047,9 @@ import java.util.concurrent.atomic.AtomicReference;
      * @param cmd command instance
      * @return true iff there is a user-supplied fallback method on the given command instance
      */
-    /*package-private*/ static boolean isFallbackUserSupplied(final AbstractCommand<?> cmd) {
+    /*package-private*/
+    //判断是否实现了fallBack方法
+    static boolean isFallbackUserSupplied(final AbstractCommand<?> cmd) {
         HystrixCommandKey commandKey = cmd.commandKey;
         Boolean containsFromMap = commandContainsFallback.get(commandKey);
         if (containsFromMap != null) {
@@ -1403,7 +1439,8 @@ import java.util.concurrent.atomic.AtomicReference;
      * Using AtomicInteger increment/decrement instead of java.util.concurrent.Semaphore since we don't need blocking and need a custom implementation to get the dynamic permit count and since
      * AtomicInteger achieves the same behavior and performance without the more complex implementation of the actual Semaphore class using AbstractQueueSynchronizer.
      */
-    /* package */static class TryableSemaphoreActual implements TryableSemaphore {
+    /* package */
+    static class TryableSemaphoreActual implements TryableSemaphore {
         protected final HystrixProperty<Integer> numberOfPermits;
         private final AtomicInteger count = new AtomicInteger(0);
 
@@ -1434,7 +1471,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
     }
 
-    /* package */static class TryableSemaphoreNoOp implements TryableSemaphore {
+    /* package */
+    static class TryableSemaphoreNoOp implements TryableSemaphore {
 
         public static final TryableSemaphore DEFAULT = new TryableSemaphoreNoOp();
 
@@ -1455,7 +1493,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
     }
 
-    /* package */static interface TryableSemaphore {
+    /* package */static
+    interface TryableSemaphore {
 
         /**
          * Use like this:
@@ -1518,6 +1557,8 @@ import java.util.concurrent.atomic.AtomicReference;
      * 
      * @return cacheKey
      */
+    //返回请求的缓存的KEY，默认返回null意味着不支持cache。如果一个key对应多个command，会返回检索到的第一个command的值
+    //如果要使用cache，需要重写该方法
     protected String getCacheKey() {
         return null;
     }
@@ -1526,6 +1567,7 @@ import java.util.concurrent.atomic.AtomicReference;
         return getCacheKey();
     }
 
+    //判断是否支持cache
     protected boolean isRequestCachingEnabled() {
         return properties.requestCacheEnabled().get() && getCacheKey() != null;
     }

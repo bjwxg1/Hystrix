@@ -26,6 +26,7 @@ import com.netflix.hystrix.HystrixCommandMetrics.HealthCounts;
  * <p>
  * It will then allow single retries after a defined sleepWindow until the execution succeeds at which point it will again close the circuit and allow executions again.
  */
+//断路器
 public interface HystrixCircuitBreaker {
 
     /**
@@ -35,6 +36,7 @@ public interface HystrixCircuitBreaker {
      * 
      * @return boolean whether a request should be permitted
      */
+    //判断请求是否可以通过
     public boolean allowRequest();
 
     /**
@@ -42,6 +44,7 @@ public interface HystrixCircuitBreaker {
      * 
      * @return boolean state of circuit breaker
      */
+    //断路器是否打开
     public boolean isOpen();
 
     /**
@@ -53,8 +56,10 @@ public interface HystrixCircuitBreaker {
      * @ExcludeFromJavadoc
      * @ThreadSafe
      */
+    //工厂方法
     public static class Factory {
         // String is HystrixCommandKey.name() (we can't use HystrixCommandKey directly as we can't guarantee it implements hashcode/equals correctly)
+        //保存断路器的Map key:HystrixCommandKey.name()
         private static ConcurrentHashMap<String, HystrixCircuitBreaker> circuitBreakersByCommand = new ConcurrentHashMap<>();
 
         /**
@@ -109,7 +114,8 @@ public interface HystrixCircuitBreaker {
         /**
          * Clears all circuit breakers. If new requests come in instances will be recreated.
          */
-        /* package */static void reset() {
+        /* package */
+        static void reset() {
             circuitBreakersByCommand.clear();
         }
     }
@@ -120,14 +126,17 @@ public interface HystrixCircuitBreaker {
      * @ExcludeFromJavadoc
      * @ThreadSafe
      */
-    /* package */static class HystrixCircuitBreakerImpl implements HystrixCircuitBreaker {
+    /* package */
+    static class HystrixCircuitBreakerImpl implements HystrixCircuitBreaker {
         private final HystrixCommandProperties properties;
         private final HystrixCommandMetrics metrics;
 
         /* track whether this circuit is open/closed at any given point in time (default to false==closed) */
+        //断路器开启标识
         private AtomicBoolean circuitOpen = new AtomicBoolean(false);
 
         /* when the circuit was marked open or was last allowed to try a 'singleTest' */
+        //断路器被打开或者上次重试时间
         private AtomicLong circuitOpenedOrLastTestedTime = new AtomicLong();
 
         protected HystrixCircuitBreakerImpl(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
@@ -158,13 +167,16 @@ public interface HystrixCircuitBreaker {
                 // properties have asked us to ignore errors so we will ignore the results of isOpen and just allow all traffic through
                 return true;
             }
+            //
             return !isOpen() || allowSingleTest();
         }
 
+        //判断是否允许测试请求通过
         public boolean allowSingleTest() {
             long timeCircuitOpenedOrWasLastTested = circuitOpenedOrLastTestedTime.get();
             // 1) if the circuit is open
             // 2) and it's been longer than 'sleepWindow' since we opened the circuit
+            //如果断路器已经打开，并且距离上次时间间隔已经超过circuitBreakerSleepWindowInMilliseconds
             if (circuitOpen.get() && System.currentTimeMillis() > timeCircuitOpenedOrWasLastTested + properties.circuitBreakerSleepWindowInMilliseconds().get()) {
                 // We push the 'circuitOpenedTime' ahead by 'sleepWindow' since we have allowed one request to try.
                 // If it succeeds the circuit will be closed, otherwise another singleTest will be allowed at the end of the 'sleepWindow'.
@@ -188,15 +200,19 @@ public interface HystrixCircuitBreaker {
             HealthCounts health = metrics.getHealthCounts();
 
             // check if we are past the statisticalWindowVolumeThreshold
+            //在统计时间窗口内系统的请求数没有到达断路器设置的阈值，直接返回false
             if (health.getTotalRequests() < properties.circuitBreakerRequestVolumeThreshold().get()) {
                 // we are not past the minimum volume threshold for the statisticalWindow so we'll return false immediately and not calculate anything
                 return false;
             }
 
+            //在统计时间窗口内系统的请求失败率没有到达断路器设置的阈值，直接返回false
             if (health.getErrorPercentage() < properties.circuitBreakerErrorThresholdPercentage().get()) {
                 return false;
             } else {
                 // our failure rate is too high, trip the circuit
+                //设置断路器为open，返回true
+                //因为使用的是CAS操作，所以要考虑并发的情景。如果CAS操作失败说明有并发线程已经将断路器打开
                 if (circuitOpen.compareAndSet(false, true)) {
                     // if the previousValue was false then we want to set the currentTime
                     circuitOpenedOrLastTestedTime.set(System.currentTimeMillis());

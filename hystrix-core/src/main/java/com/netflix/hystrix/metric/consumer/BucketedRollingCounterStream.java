@@ -35,6 +35,8 @@ public abstract class BucketedRollingCounterStream<Event extends HystrixEvent, B
                                            final Func2<Bucket, Event, Bucket> appendRawEventToBucket,
                                            final Func2<Output, Bucket, Output> reduceBucket) {
         super(stream, numBuckets, bucketSizeInMs, appendRawEventToBucket);
+        //scan 遍历Observable产生的事件然后按照定义的规则进行运算
+        //skip 去掉被观察者前n个item再进行发射
         this.reduceWindowToSummary = window -> window.scan(getEmptyOutputValue(), reduceBucket).skip(numBuckets);
     }
 

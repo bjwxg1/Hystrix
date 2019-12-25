@@ -52,6 +52,7 @@ import rx.subjects.Subject;
  * be more efficient CPU-wise than immediately hopping off-thread and doing all the metric calculations in the
  * RxComputationThreadPool.
  */
+//TODO
 public class HystrixThreadEventStream {
     private final long threadId;
     private final String threadName;
@@ -67,6 +68,7 @@ public class HystrixThreadEventStream {
         }
     };
 
+    //将HystrixCommandExecutionStarted写入到HystrixCommandStartStream和HystrixThreadPoolStartStream
     private static final Action1<HystrixCommandExecutionStarted> writeCommandStartsToShardedStreams = event -> {
         HystrixCommandStartStream commandStartStream = HystrixCommandStartStream.getInstance(event.getCommandKey());
         commandStartStream.write(event);
@@ -77,6 +79,7 @@ public class HystrixThreadEventStream {
         }
     };
 
+    //将HystrixCommandCompletion写入到HystrixCommandCompletionStream和HystrixThreadPoolCompletionStream
     private static final Action1<HystrixCommandCompletion> writeCommandCompletionsToShardedStreams = commandCompletion -> {
         HystrixCommandCompletionStream commandStream = HystrixCommandCompletionStream.getInstance(commandCompletion.getCommandKey());
         commandStream.write(commandCompletion);
@@ -92,7 +95,8 @@ public class HystrixThreadEventStream {
         collapserStream.write(collapserEvent);
     };
 
-    /* package */ HystrixThreadEventStream(Thread thread) {
+    /* package */
+    HystrixThreadEventStream(Thread thread) {
         this.threadId = thread.getId();
         this.threadName = thread.getName();
         writeOnlyCommandStartSubject = PublishSubject.create();

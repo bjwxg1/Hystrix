@@ -37,14 +37,23 @@ import java.util.concurrent.atomic.AtomicReference;
  * @param <Output> type of data emitted to stream subscribers (often is the same as A but does not have to be)
  */
 public abstract class BucketedCounterStream<Event extends HystrixEvent, Bucket, Output> {
+    //时间窗口内桶的个数
     protected final int numBuckets;
     protected final Observable<Bucket> bucketedStream;
     protected final AtomicReference<Subscription> subscription = new AtomicReference<>(null);
 
+    //每个桶如何计算聚合数据
     private final Func1<Observable<Event>, Observable<Bucket>> reduceBucketToSummary;
 
     private final BehaviorSubject<Output> counterSubject = BehaviorSubject.create(getEmptyOutputValue());
 
+    /**
+     *
+     * @param inputEventStream 数据发布源
+     * @param numBuckets 时间窗口内的桶数目
+     * @param bucketSizeInMs bucket时长，即窗口滚动时间间隔
+     * @param appendRawEventToBucket bucket内部统计函数，将event添加到Bucket【用于bucket内的统计】
+     */
     protected BucketedCounterStream(final HystrixEventStream<Event> inputEventStream, final int numBuckets, final int bucketSizeInMs,
                                     final Func2<Bucket, Event, Bucket> appendRawEventToBucket) {
         this.numBuckets = numBuckets;

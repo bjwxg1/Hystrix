@@ -15,18 +15,16 @@
  */
 package com.netflix.hystrix;
 
-import static com.netflix.hystrix.strategy.properties.HystrixPropertiesChainedProperty.forBoolean;
-import static com.netflix.hystrix.strategy.properties.HystrixPropertiesChainedProperty.forInteger;
-import static com.netflix.hystrix.strategy.properties.HystrixPropertiesChainedProperty.forString;
+import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
+import com.netflix.hystrix.strategy.properties.HystrixPropertiesStrategy;
+import com.netflix.hystrix.strategy.properties.HystrixProperty;
+import com.netflix.hystrix.util.HystrixRollingNumber;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
-import com.netflix.hystrix.strategy.properties.HystrixPropertiesStrategy;
-import com.netflix.hystrix.strategy.properties.HystrixProperty;
-import com.netflix.hystrix.util.HystrixRollingNumber;
+import static com.netflix.hystrix.strategy.properties.HystrixPropertiesChainedProperty.forInteger;
 
 /**
  * Properties for instances of {@link HystrixThreadPool}.

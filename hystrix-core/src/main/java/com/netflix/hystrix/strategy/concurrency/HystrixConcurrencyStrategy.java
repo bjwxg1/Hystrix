@@ -44,6 +44,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * See {@link HystrixPlugins} or the Hystrix GitHub Wiki for information on configuring plugins: <a
  * href="https://github.com/Netflix/Hystrix/wiki/Plugins">https://github.com/Netflix/Hystrix/wiki/Plugins</a>.
  */
+//定义系统默认情况下并发相关方面的不同行为或实现
+//当自定义ConcurrencyStrategy时需要保证策略对ThreadLocals幂等
 public abstract class HystrixConcurrencyStrategy {
 
     /**
@@ -70,6 +72,7 @@ public abstract class HystrixConcurrencyStrategy {
      *            {@code BlockingQueue<Runnable>} as provided by {@link #getBlockingQueue(int)}
      * @return instance of {@link ThreadPoolExecutor}
      */
+    //构建ThreadPoolExecutor的工厂方法
     public ThreadPoolExecutor getThreadPool(final HystrixThreadPoolKey threadPoolKey, HystrixProperty<Integer> corePoolSize, HystrixProperty<Integer> maximumPoolSize, HystrixProperty<Integer> keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
         ThreadFactory threadFactory = null;
         if (!PlatformSpecific.isAppEngine()) {
@@ -105,6 +108,7 @@ public abstract class HystrixConcurrencyStrategy {
      *            The max size of the queue requested via properties (or system default if no properties set).
      * @return instance of {@code BlockingQueue<Runnable>}
      */
+    //创建BlockingQueue的工厂方法
     public BlockingQueue<Runnable> getBlockingQueue(int maxQueueSize) {
         /*
          * We are using SynchronousQueue if maxQueueSize <= 0 (meaning a queue is not wanted).
@@ -134,6 +138,7 @@ public abstract class HystrixConcurrencyStrategy {
      *            {@code Callable<T>} to be executed via a {@link ThreadPoolExecutor}
      * @return {@code Callable<T>} either as a pass-thru or wrapping the one given
      */
+    //提供了在执行前包装Callable的机会
     public <T> Callable<T> wrapCallable(Callable<T> callable) {
         return callable;
     }

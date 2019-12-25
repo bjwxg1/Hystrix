@@ -64,7 +64,9 @@ public class HystrixTimer {
         }
     }
 
-    /* package */ AtomicReference<ScheduledExecutor> executor = new AtomicReference<>();
+    /* package */
+    //线程池
+    AtomicReference<ScheduledExecutor> executor = new AtomicReference<>();
 
     /**
      * Add a {@link TimerListener} that will be executed until it is garbage collected or removed by clearing the returned {@link Reference}.
@@ -103,8 +105,8 @@ public class HystrixTimer {
         return new TimerReference(listener, f);
     }
 
+    //TimerReference包装了TimerListener和ScheduledFuture
     private class TimerReference extends SoftReference<TimerListener> {
-
         private final ScheduledFuture<?> f;
 
         TimerReference(TimerListener referent, ScheduledFuture<?> f) {
@@ -136,7 +138,9 @@ public class HystrixTimer {
         }
     }
 
-    /* package */ static class ScheduledExecutor {
+    /* package */
+    //执行TimerListener的线程池
+    static class ScheduledExecutor {
         /* package */ volatile ScheduledThreadPoolExecutor executor;
         private volatile boolean initialized;
 
@@ -144,7 +148,6 @@ public class HystrixTimer {
          * We want this only done once when created in compareAndSet so use an initialize method
          */
         public void initialize() {
-
             HystrixPropertiesStrategy propertiesStrategy = HystrixPlugins.getInstance().getPropertiesStrategy();
             int coreSize = propertiesStrategy.getTimerThreadPoolProperties().getCorePoolSize().get();
 
@@ -178,6 +181,7 @@ public class HystrixTimer {
         }
     }
 
+    //TimerListener 用于判断Command是否超时
     public static interface TimerListener {
 
         /**

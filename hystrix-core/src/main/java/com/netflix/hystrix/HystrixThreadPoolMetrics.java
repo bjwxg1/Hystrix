@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Used by {@link HystrixThreadPool} to record metrics.
  */
+//Hystrix线程池 指标监控
 public class HystrixThreadPoolMetrics extends HystrixMetrics {
 
     private static final HystrixEventType[] ALL_COMMAND_EVENT_TYPES = HystrixEventType.values();
@@ -42,6 +43,7 @@ public class HystrixThreadPoolMetrics extends HystrixMetrics {
     private static final int NUMBER_THREADPOOL_EVENT_TYPES = ALL_THREADPOOL_EVENT_TYPES.length;
 
     // String is HystrixThreadPoolKey.name() (we can't use HystrixThreadPoolKey directly as we can't guarantee it implements hashcode/equals correctly)
+    //保存所有线程池监控指标
     private static final ConcurrentHashMap<String, HystrixThreadPoolMetrics> metrics = new ConcurrentHashMap<>();
 
     /**

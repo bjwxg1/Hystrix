@@ -10,8 +10,9 @@ import com.netflix.hystrix.strategy.properties.HystrixProperty;
  * <p>
  * Default implementation of methods uses Archaius (https://github.com/Netflix/archaius)
  */
+//HystrixTimer中线程池的配置
 public abstract class HystrixTimerThreadPoolProperties {
-
+    //核心线程数
     private final HystrixProperty<Integer> corePoolSize;
 
     protected HystrixTimerThreadPoolProperties() {

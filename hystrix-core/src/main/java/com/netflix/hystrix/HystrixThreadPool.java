@@ -42,6 +42,8 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * For more information see the Github Wiki: https://github.com/Netflix/Hystrix/wiki/Configuration#wiki-ThreadPool and https://github.com/Netflix/Hystrix/wiki/How-it-Works#wiki-Isolation
  */
+//HystrixThreadPool用于执行HystrixCommand的run()方法【隔离策略配置为线程池隔离】
+//通常情况下每个HystrixCommandGroupKey拥有一个线程池
 public interface HystrixThreadPool {
 
     /**
@@ -83,12 +85,14 @@ public interface HystrixThreadPool {
     /**
      * @ExcludeFromJavadoc
      */
-    /* package */static class Factory {
+    /* package */
+    static class Factory {
         /*
          * Use the String from HystrixThreadPoolKey.name() instead of the HystrixThreadPoolKey instance as it's just an interface and we can't ensure the object
          * we receive implements hashcode/equals correctly and do not want the default hashcode/equals which would create a new threadpool for every object we get even if the name is the same
          */
-        /* package */final static ConcurrentHashMap<String, HystrixThreadPool> threadPools = new ConcurrentHashMap<>();
+        /* package */
+        final static ConcurrentHashMap<String, HystrixThreadPool> threadPools = new ConcurrentHashMap<>();
 
         /**
          * Get the {@link HystrixThreadPool} instance for a given {@link HystrixThreadPoolKey}.
@@ -97,7 +101,8 @@ public interface HystrixThreadPool {
          * 
          * @return {@link HystrixThreadPool} instance
          */
-        /* package */static HystrixThreadPool getInstance(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties.Setter propertiesBuilder) {
+        /* package */
+        static HystrixThreadPool getInstance(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties.Setter propertiesBuilder) {
             // get the key to use instead of using the object itself so that if people forget to implement equals/hashcode things will still work
             String key = threadPoolKey.name();
 
@@ -123,7 +128,8 @@ public interface HystrixThreadPool {
          * and causing thread-pools to initialize while also trying to shutdown.
          * </p>
          */
-        /* package */static synchronized void shutdown() {
+        /* package */
+        static synchronized void shutdown() {
             for (HystrixThreadPool pool : threadPools.values()) {
                 pool.getExecutor().shutdown();
             }
@@ -137,7 +143,8 @@ public interface HystrixThreadPool {
          * and causing thread-pools to initialize while also trying to shutdown.
          * </p>
          */
-        /* package */static synchronized void shutdown(long timeout, TimeUnit unit) {
+        /* package */
+        static synchronized void shutdown(long timeout, TimeUnit unit) {
             for (HystrixThreadPool pool : threadPools.values()) {
                 pool.getExecutor().shutdown();
             }
@@ -156,7 +163,9 @@ public interface HystrixThreadPool {
      * @ExcludeFromJavadoc
      * @ThreadSafe
      */
-    /* package */static class HystrixThreadPoolDefault implements HystrixThreadPool {
+    /* package */static class
+    //默认HystrixThread实现
+    HystrixThreadPoolDefault implements HystrixThreadPool {
         private final HystrixThreadPoolProperties properties;
         private final BlockingQueue<Runnable> queue;
         private final ThreadPoolExecutor threadPool;

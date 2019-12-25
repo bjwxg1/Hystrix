@@ -22,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * This interface is intended to work natively with Enums so that implementing code can be an enum that implements this interface.
  */
+// 一个代表线程池的key，主要体现是用于监测、指标发布、缓存和其他此类用途。
+//HystrixCommand通过一个HystrixThreadPoolKey和HystrixThreadPool进行关联，【如果为空默认会使用HystrixCommandGroupKey】
 public interface HystrixThreadPoolKey {
 
     /**

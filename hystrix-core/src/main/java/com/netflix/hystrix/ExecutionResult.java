@@ -33,8 +33,11 @@ public class ExecutionResult {
     private final EventCounts eventCounts;
     private final Exception failedExecutionException;
     private final Exception executionException;
+    //命令开始执行时间
     private final long startTimestamp;
+    //执行延时，执行run()方法的延时
     private final int executionLatency; //time spent in run() method
+    //用户线程延时
     private final int userThreadLatency; //time elapsed between caller thread submitting request and response being visible to it
     private final boolean executionOccurred;
     private final boolean isExecutedInThread;
