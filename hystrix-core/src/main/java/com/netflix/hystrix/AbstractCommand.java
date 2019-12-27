@@ -118,7 +118,7 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
     protected final AtomicReference<TimedOutStatus> isCommandTimedOut = new AtomicReference<>(TimedOutStatus.NOT_EXECUTED);
     //任务完成标识
     protected final AtomicBoolean isExecutionComplete = new AtomicBoolean(false);
-    //Command执行完时的执行方法
+    //Command执行完时的执行方法 TODO
     protected final AtomicReference<Action0> endCurrentThreadExecutingCommand = new AtomicReference<>(); // don't like how this is being done
 
     /**
@@ -374,6 +374,7 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                 long latency = System.currentTimeMillis() - executionResult.getStartTimestamp();
                 executionResult = executionResult.markUserThreadCompletion((int) latency);
                 executionResult = executionResult.addEvent((int) latency, HystrixEventType.RESPONSE_FROM_CACHE);
+                //向metrics发送统计信息
                 metrics.markCommandDone(executionResult, commandKey, threadPoolKey);
                 eventNotifier.markEvent(HystrixEventType.RESPONSE_FROM_CACHE, commandKey);
                 isExecutionComplete.set(true);
@@ -427,7 +428,7 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                                 .unsafeSubscribe(observer);
                     }
                 }
-                //断路处理逻辑
+                //断路处理逻辑【断路器已经打开，直接走fallback进行降级处理】
                 else {
                     // record that we are returning a short-circuited fallback
                     eventNotifier.markEvent(HystrixEventType.SHORT_CIRCUITED, commandKey);
@@ -435,6 +436,7 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                     Exception shortCircuitException = new RuntimeException("Hystrix circuit short-circuited and is OPEN");
                     executionResult = executionResult.setExecutionException(shortCircuitException);
                     try {
+                        //获取fallBack方法，【执行fallBack相关逻辑处理】
                         getFallbackOrThrowException(HystrixEventType.SHORT_CIRCUITED, FailureType.SHORTCIRCUIT,
                                 "short-circuited", shortCircuitException)
                                 .unsafeSubscribe(observer);
@@ -534,7 +536,9 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                     }
                 }
             }).subscribeOn(threadPool.getScheduler(() -> properties.executionIsolationThreadInterruptOnTimeout().get() && _self.isCommandTimedOut.get().equals(TimedOutStatus.TIMED_OUT)));
-        } else {
+        }
+        //
+        else {
             metrics.markCommandStart(commandKey, threadPoolKey, ExecutionIsolationStrategy.SEMAPHORE);
             // semaphore isolated
             // store the command that is being run
@@ -649,7 +653,9 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                 .doOnTerminate(() -> {
                     //If the command timed out, then the calling thread has already walked away so we need
                     //to handle these markers.  Otherwise, the calling thread will perform these for us.
+                    //超时逻辑处理
                     if (isCommandTimedOut.get().equals(TimedOutStatus.TIMED_OUT)) {
+                        //超时处理逻辑
                         handleThreadEnd();
 
                     }
@@ -705,15 +711,16 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
             if (properties.fallbackEnabled().get()) {
             /* fallback behavior is permitted so attempt */
                 final AbstractCommand<R> _cmd = this;
-
+                //获取执行fallBack的信号量
                 final TryableSemaphore fallbackSemaphore = getFallbackSemaphore();
                 Observable<R> fallbackExecutionChain;
-                // acquire a permit尝试获取permit
+                // 尝试获取fallbackSemaphore【为什么在进行fallback方法时也需要获取信号量。为了防止大量的断路或者失败同时执行fallback消耗系统资源】
                 if (fallbackSemaphore.tryAcquire()) {
                     try {
+                        //判断是否实现了fallback方法
                         if (isFallbackUserSupplied(this)) {
                             executionHook.onFallbackStart(this);
-                            //获取FallbackObservable
+                            //获取FallbackObservable【在FallbackObservable里面会调动重载的fallback方法】
                             fallbackExecutionChain = getFallbackObservable();
                         } else {
                             //same logic as above without the hook invocation
@@ -726,8 +733,10 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
 
                     fallbackExecutionChain =  fallbackExecutionChain
                             .lift(new FallbackHookApplication(_cmd))
-                            .doOnTerminate(fallbackSemaphore::release);
-                } else {
+                            .doOnTerminate(fallbackSemaphore::release);//释放fallbackSemaphore
+                }
+                //如果没有获取到fallbackSemaphore
+                else {
                     long latencyWithFallback = System.currentTimeMillis() - executionResult.getStartTimestamp();
                     eventNotifier.markEvent(HystrixEventType.FALLBACK_REJECTION, commandKey);
                     executionResult = executionResult.addEvent((int) latencyWithFallback, HystrixEventType.FALLBACK_REJECTION);
@@ -795,7 +804,9 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                 }).doOnEach(n -> {
                     setRequestContextIfNeeded(currentRequestContext);
                 });
-            } else {
+            }
+            //如果command不支持fallback操作
+            else {
                 /* fallback is disabled so throw HystrixRuntimeException */
                 Exception e = originalException;
                 logger.debug("Fallback disabled for HystrixCommand so will throw HystrixRuntimeException. ", e); // debug only since we're throwing the exception and someone higher will do something with it
@@ -919,7 +930,8 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
                     if (originalCommand.isCommandTimedOut.compareAndSet(TimedOutStatus.NOT_EXECUTED, TimedOutStatus.TIMED_OUT)) {
                         // report timeout failure
                         originalCommand.eventNotifier.markEvent(HystrixEventType.TIMEOUT, originalCommand.commandKey);
-                        // shut down the original request
+                        //shut down the original request
+                        //如果command已经执行超时，取消command的执行
                         s.unsubscribe();
                         timeoutRunnable.run();
                         //if it did not start, then we need to mark a command start for concurrency metrics, and then issue the timeout

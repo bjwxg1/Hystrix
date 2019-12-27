@@ -206,6 +206,7 @@ public interface HystrixThreadPool {
         }
 
         // allow us to change things via fast-properties by setting it each time
+        //动态配置的基础，每次获取Scheduler都重新设置线程池相关参数
         private void touchConfig() {
             final int dynamicCoreSize = properties.coreSize().get();
             threadPool.setCorePoolSize(dynamicCoreSize);
