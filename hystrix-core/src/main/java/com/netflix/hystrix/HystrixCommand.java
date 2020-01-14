@@ -359,7 +359,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
      * @throws IllegalStateException
      *             if invoked more than once
      */
-    //用于异步执行命名：将命令加入到Thread Pool，然后返回Future，然后通过Future去获取执行结果
+    //用于异步执行命令：将命令加入到Thread Pool，然后返回Future，然后通过Future去获取执行结果
     public Future<R> queue() {
         /*
          * --- Schedulers.immediate()
