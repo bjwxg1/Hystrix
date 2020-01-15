@@ -29,7 +29,9 @@ import java.util.List;
  * This being immutable forces and ensure thread-safety instead of using AtomicInteger/ConcurrentLinkedQueue and determining
  * when it's safe to mutate the object directly versus needing to deep-copy clone to a new instance.
  */
+//记录HystrixCommand执行信息及执行结果
 public class ExecutionResult {
+    //通过位图统计各种HystrixEventType是否触发，以及触发的次数
     private final EventCounts eventCounts;
     private final Exception failedExecutionException;
     private final Exception executionException;

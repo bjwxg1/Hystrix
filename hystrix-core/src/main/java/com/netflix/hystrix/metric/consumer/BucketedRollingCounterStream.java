@@ -28,7 +28,8 @@ import rx.functions.Func2;
  * @param <Bucket> type of data contained in each bucket
  * @param <Output> type of data emitted to stream subscribers (often is the same as A but does not have to be)
  */
-public abstract class BucketedRollingCounterStream<Event extends HystrixEvent, Bucket, Output> extends BucketedCounterStream<Event, Bucket, Output> {
+public abstract class BucketedRollingCounterStream<Event extends HystrixEvent, Bucket, Output>
+        extends BucketedCounterStream<Event, Bucket, Output> {
     private final Func1<Observable<Bucket>, Observable<Output>> reduceWindowToSummary;
 
     protected BucketedRollingCounterStream(HystrixEventStream<Event> stream, final int numBuckets, int bucketSizeInMs,

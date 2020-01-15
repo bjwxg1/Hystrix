@@ -58,7 +58,6 @@ public class HystrixCommandStartStream implements HystrixEventStream<HystrixComm
 
     HystrixCommandStartStream(final HystrixCommandKey commandKey) {
         this.commandKey = commandKey;
-
         this.writeOnlySubject = new SerializedSubject<>(PublishSubject.<HystrixCommandExecutionStarted>create());
         this.readOnlyStream = writeOnlySubject.share();
     }

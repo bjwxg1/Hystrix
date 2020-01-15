@@ -61,7 +61,8 @@ public class HystrixThreadEventStream {
     private final Subject<HystrixCommandCompletion, HystrixCommandCompletion> writeOnlyCommandCompletionSubject;
     private final Subject<HystrixCollapserEvent, HystrixCollapserEvent> writeOnlyCollapserSubject;
 
-    private static final ThreadLocal<HystrixThreadEventStream> threadLocalStreams = new ThreadLocal<HystrixThreadEventStream>() {
+    private static final ThreadLocal<HystrixThreadEventStream> threadLocalStreams =
+            new ThreadLocal<HystrixThreadEventStream>() {
         @Override
         protected HystrixThreadEventStream initialValue() {
             return new HystrixThreadEventStream(Thread.currentThread());
@@ -72,7 +73,6 @@ public class HystrixThreadEventStream {
     private static final Action1<HystrixCommandExecutionStarted> writeCommandStartsToShardedStreams = event -> {
         HystrixCommandStartStream commandStartStream = HystrixCommandStartStream.getInstance(event.getCommandKey());
         commandStartStream.write(event);
-
         if (event.isExecutedInThread()) {
             HystrixThreadPoolStartStream threadPoolStartStream = HystrixThreadPoolStartStream.getInstance(event.getThreadPoolKey());
             threadPoolStartStream.write(event);
@@ -130,8 +130,9 @@ public class HystrixThreadEventStream {
     }
 
     public void commandExecutionStarted(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey,
-                                        HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy, int currentConcurrency) {
-        HystrixCommandExecutionStarted event = new HystrixCommandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentConcurrency);
+                                          HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy, int currentConcurrency) {
+        HystrixCommandExecutionStarted event = new HystrixCommandExecutionStarted(commandKey, threadPoolKey,
+                isolationStrategy, currentConcurrency);
         writeOnlyCommandStartSubject.onNext(event);
     }
 

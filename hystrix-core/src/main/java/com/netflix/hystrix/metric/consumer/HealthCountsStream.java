@@ -87,7 +87,8 @@ public class HealthCountsStream extends BucketedRollingCounterStream<HystrixComm
 
     private HealthCountsStream(final HystrixCommandKey commandKey, final int numBuckets, final int bucketSizeInMs,
                                Func2<long[], HystrixCommandCompletion, long[]> reduceCommandCompletion) {
-        super(HystrixCommandCompletionStream.getInstance(commandKey), numBuckets, bucketSizeInMs, reduceCommandCompletion, healthCheckAccumulator);
+        super(HystrixCommandCompletionStream.getInstance(commandKey), numBuckets, bucketSizeInMs,
+                reduceCommandCompletion, healthCheckAccumulator);
     }
 
     @Override

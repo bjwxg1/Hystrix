@@ -182,7 +182,8 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     private final RollingCommandMaxConcurrencyStream rollingCommandMaxConcurrencyStream;
 
     /* package */
-    HystrixCommandMetrics(final HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties, HystrixEventNotifier eventNotifier) {
+    HystrixCommandMetrics(final HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey
+            threadPoolKey, HystrixCommandProperties properties, HystrixEventNotifier eventNotifier) {
         super(null);
         this.key = key;
         this.group = commandGroup;
@@ -341,9 +342,12 @@ public class HystrixCommandMetrics extends HystrixMetrics {
 
     /* package-private */
     //发送CommandStart消息
-    void markCommandStart(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy) {
+    void markCommandStart(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey,
+                          HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy) {
+        //增加Command的并发计数器
         int currentCount = concurrentExecutionCount.incrementAndGet();
-        HystrixThreadEventStream.getInstance().commandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentCount);
+        HystrixThreadEventStream.getInstance().commandExecutionStarted(commandKey,
+                threadPoolKey, isolationStrategy, currentCount);
     }
 
     /* package-private */
