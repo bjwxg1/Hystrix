@@ -362,6 +362,7 @@ abstract class AbstractCommand<R> implements HystrixInvokableInfo<R>, HystrixObs
         }
 
         final HystrixInvokableInfo<R> _this = this;
+        //判断是否开启缓存，默认不开启
         final boolean requestCacheEnabled = isRequestCachingEnabled();
         //如果允许cache，尝试从cache中获取
         if (requestCacheEnabled) {

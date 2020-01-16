@@ -117,7 +117,8 @@ public class HystrixRequestContext implements Closeable, AutoCloseable {
      * 
      * Only HystrixRequestVariable has a reason to be accessing this field.
      */
-    /* package */ConcurrentHashMap<HystrixRequestVariableDefault<?>, HystrixRequestVariableDefault.LazyInitializer<?>> state = new ConcurrentHashMap<>();
+    /* package */
+    ConcurrentHashMap<HystrixRequestVariableDefault<?>, HystrixRequestVariableDefault.LazyInitializer<?>> state = new ConcurrentHashMap<>();
 
     // instantiation should occur via static factory methods.
     private HystrixRequestContext() {

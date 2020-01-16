@@ -51,6 +51,8 @@ public class HystrixRequestVariableHolder<T> {
          * 2) If no implementation is found in cache then construct from factory.
          * 3) Cache implementation from factory as each object instance needs to be statically cached to be relevant across threads.
          */
+        //1.从requestVariableInstance中获取RequestVariable；
+        //2.如果不存在则构建一个，并存放到从requestVariableInstance中获取RequestVariable
         RVCacheKey key = new RVCacheKey(this, concurrencyStrategy);
         HystrixRequestVariable<?> rvInstance = requestVariableInstance.get(key);
         if (rvInstance == null) {

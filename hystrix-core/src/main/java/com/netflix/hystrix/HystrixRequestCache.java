@@ -35,8 +35,9 @@ public class HystrixRequestCache {
     private static final Logger logger = LoggerFactory.getLogger(HystrixRequestCache.class);
 
     // the String key must be: HystrixRequestCache.prefix + concurrencyStrategy + cacheKey
-    private final static ConcurrentHashMap<RequestCacheKey, HystrixRequestCache> caches = new ConcurrentHashMap<>();
-
+    //为每一个cacheKey维护一个HystrixRequestCache对象
+    private final static ConcurrentHashMap<RequestCacheKey, HystrixRequestCache> caches
+            = new ConcurrentHashMap<>();
     private final RequestCacheKey rcKey;
     private final HystrixConcurrencyStrategy concurrencyStrategy;
 
@@ -46,8 +47,9 @@ public class HystrixRequestCache {
      * Key => CommandPrefix + CacheKey : Future<?> from queue()
      */
     //保存缓存的Map
-    private static final HystrixRequestVariableHolder<ConcurrentHashMap<ValueCacheKey, Observable<?>>> requestVariableForCache = new HystrixRequestVariableHolder<>(new HystrixRequestVariableLifecycle<ConcurrentHashMap<ValueCacheKey, Observable<?>>>() {
-
+    private static final HystrixRequestVariableHolder<ConcurrentHashMap<ValueCacheKey, Observable<?>>> requestVariableForCache
+            = new HystrixRequestVariableHolder<>(new HystrixRequestVariableLifecycle<ConcurrentHashMap<ValueCacheKey,
+            Observable<?>>>() {
         @Override
         public ConcurrentHashMap<ValueCacheKey, Observable<?>> initialValue() {
             return new ConcurrentHashMap<>();
@@ -57,7 +59,6 @@ public class HystrixRequestCache {
         public void shutdown(ConcurrentHashMap<ValueCacheKey, Observable<?>> value) {
             // nothing to shutdown
         }
-
     });
 
     private HystrixRequestCache(RequestCacheKey rcKey, HystrixConcurrencyStrategy concurrencyStrategy) {
@@ -102,7 +103,8 @@ public class HystrixRequestCache {
         if (key != null) {
             ConcurrentHashMap<ValueCacheKey, Observable<?>> cacheInstance = requestVariableForCache.get(concurrencyStrategy);
             if (cacheInstance == null) {
-                throw new IllegalStateException("Request caching is not available. Maybe you need to initialize the HystrixRequestContext?");
+                throw new IllegalStateException("Request caching is not available. " +
+                        "Maybe you need to initialize the HystrixRequestContext?");
             }
             /* look for the stored value */
             return (Observable<T>) cacheInstance.get(key);
@@ -124,7 +126,9 @@ public class HystrixRequestCache {
      */
     // suppressing warnings because we are using a raw Future since it's in a heterogeneous ConcurrentHashMap cache
     @SuppressWarnings({ "unchecked" })
-    /* package */<T> Observable<T> putIfAbsent(String cacheKey, Observable<T> f) {
+    /* package */
+    <T> Observable<T> putIfAbsent(String cacheKey, Observable<T> f) {
+        //创建ValueCacheKey
         ValueCacheKey key = getRequestCacheKey(cacheKey);
         if (key != null) {
             /* look for the stored value */

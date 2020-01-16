@@ -75,7 +75,8 @@ public class HystrixRequestVariableDefault<T> implements HystrixRequestVariable<
         if (HystrixRequestContext.getContextForCurrentThread() == null) {
             throw new IllegalStateException(HystrixRequestContext.class.getSimpleName() + ".initializeContext() must be called at the beginning of each request before RequestVariable functionality can be used.");
         }
-        ConcurrentHashMap<HystrixRequestVariableDefault<?>, LazyInitializer<?>> variableMap = HystrixRequestContext.getContextForCurrentThread().state;
+        ConcurrentHashMap<HystrixRequestVariableDefault<?>, LazyInitializer<?>> variableMap =
+                HystrixRequestContext.getContextForCurrentThread().state;
 
         // short-circuit the synchronized path below if we already have the value in the ConcurrentHashMap
         LazyInitializer<?> v = variableMap.get(this);
